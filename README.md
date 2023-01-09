@@ -45,19 +45,19 @@ etc... This first set of data is likely just a JSON object specific to the user
 or content requested. This object might contain image URLs, so right after the
 component update, images will be able to load.
 
-So, since the data is being requested _after_ React has updated the DOM,
-is there a _side effect_ that might be useful here?
+So, since the data is being requested _after_ React has updated the DOM, is
+there a _side effect_ that might be useful here?
 
 Well, yes there is! Whenever we want to fetch data in our components without
 making a user trigger that request by clicking a button or submitting a form,
-the `useEffect` hook gives us a great place to do that. By
-putting a `fetch()` within `useEffect`, when the data is received, we can use
-`setState` to store the received data. This causes an update with that remote
-data stored in state. A very simple implementation of the App component with
-`fetch` might look like this:
+the `useEffect` hook gives us a great place to do that. By putting a `fetch()`
+within `useEffect`, when the data is received, we can use `setState` to store
+the received data. This causes an update with that remote data stored in state.
+A very simple implementation of the App component with `fetch` might look like
+this:
 
 ```jsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 
 function App() {
   const [peopleInSpace, setPeopleInSpace] = useState([]);
@@ -119,6 +119,58 @@ function App() {
   return <div>{peopleInSpace.map((person) => person.name)}</div>;
 }
 ```
+
+### Typing Fetched Data
+
+Before we continue looking at how else we can use `fetch`, let's address the
+elephant in the room - the above example had no typing. Type inference does a
+lot right for us, but recall that when setting state to an empty array
+(`useState([])`), TypeScript infers that it is of type `never`. However, as the
+developers, we know that our array isn't always going to be empty. We're going
+to set it equal to data we receive from an external API.
+
+So, how are we to type it before we know what data we get back? There are a few
+ways. Some API's will have documentation that outlines exactly what their return
+data looks like. However, others, like the one we're using here, do not. In such
+cases, initially console logging the data getting returned to you should show
+you what it looks like.
+
+In either case, you can then create an interface like normal based off the
+data's shape and use that to type. For example, if you go to the [API
+link][astros api] we're fetching from, you can see the data looks a bit like
+this:
+
+```json
+{
+  "number": 10,
+  "people": [
+    {
+      "name": "Oleg Artemyev",
+      "craft": "ISS"
+    }
+  ],
+  "message": "success"
+}
+```
+
+In our case, the only data we need to save in our `peopleInSpace` state variable
+is the `people` array. So, we can create an interface just based on that, like
+so:
+
+```ts
+interface Astronaut {
+  name: string;
+  craft: string;
+}
+```
+
+And use that to type our state:
+
+```tsx
+const [peopleInSpace, setPeopleInSpace] = useState<Astronaut[]>([]);
+```
+
+Now our array won't be of type `never`!
 
 ### Fetching Data With Events
 
@@ -192,7 +244,7 @@ Then, when setting up the fetch request, we can just pass the entire state
 within the body, as there are no other values:
 
 ```jsx
-function handleSubmit(event) {
+function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
   event.preventDefault();
   fetch("the server URL", {
     method: "POST",
@@ -234,5 +286,8 @@ the same component as your top level state.
 
 [insta]: https://www.instagram.com/
 [airbnb]: https://airbnb.com/
-[fake3g]: https://developer.chrome.com/docs/devtools/network/reference#throttling
-[react ajax]: https://reactjs.org/docs/faq-ajax.html#example-using-ajax-results-to-set-local-state
+[fake3g]:
+  https://developer.chrome.com/docs/devtools/network/reference#throttling
+[react ajax]:
+  https://reactjs.org/docs/faq-ajax.html#example-using-ajax-results-to-set-local-state
+[astros api]: http://api.open-notify.org/astros.json
